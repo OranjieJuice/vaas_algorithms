@@ -1,68 +1,58 @@
 #include "AlgoImgCls.h"
 #include <string>
 #include <cutils/properties.h>
+#include <iostream>
+#include <fstream>
 
 namespace vaas_algorithms {
 
-AlgoImgCls AlgoImgCls::msInstance = AlgoImgCls();
+AlgoImgCls AlgoImgCls::msInstance;
 
 AlgoImgCls::AlgoImgCls() {}
 
 AlgoImgCls::~AlgoImgCls() {}
 
 int AlgoImgCls::init() {
+    ALOGI(TAG, "AlgoImgCls init finish");
     std::string dlc = "/odm/etc/camera/shufflenetv2.dlc";
     std::string outputDir = "/data/data/com.android.camera2/save/vaas";
-    char key[256] = "persist.com.android.camera.runtime";
+    mClassNum = 1000;
+    mElementSize = BUFFER_ELEMENT_SIZE.find(BufferType::BUFFER_TYPE_FLOAT32)->second;
+    uint32_t bytes = mClassNum * mElementSize;
+    mOutput.resize(bytes);
+
+    char key[256] = "persist.com.android.camera.imgcls.runtime";
     char value[256];
     property_get(key, value, "dsp");
     ALOGI(TAG, "use runtime %s", value);
-    zdl::DlSystem::Runtime_t runtime = str2Runtime(value);
-
+    zdl::DlSystem::Runtime_t runtime = SNPETask::str2Runtime(value);
     zdl::DlSystem::ProfilingLevel_t profilingLevel = zdl::DlSystem::ProfilingLevel_t::DETAILED;
     ALOGI(TAG, "build snpe");
     mpSNPETask = std::make_unique<SNPETask>(dlc, runtime, profilingLevel, outputDir, false, false, 32, 1, true);
-    ALOGI(TAG, "vaasInit finish");
+    ALOGI(TAG, "AlgoImgCls init finish");
     return EXIT_SUCCESS;
 }
 
-int AlgoImgCls::process(BufferInfo inputInfo, BufferInfo outputInfo, bool bReuseBuffer) {
-    uint8_t** pInputs = inputInfo.pBuffer;
-    std::vector<uint32_t> inputsBytes(inputInfo.num, 0);
-    for (uint32_t i = 0; i < inputInfo.num; ++i) {
-        inputsBytes[i] = inputInfo.pWidth[i] * inputInfo.pHeight[i] * 3 * sizeof(float);
+int AlgoImgCls::process(BufferInfos& inputInfos, ImageClassificationInfo& outputInfo) {
+    ALOGI(TAG, "AlgoImgCls process start");
+    std::vector<uint8_t*> inputs(inputInfos.num, nullptr);
+    std::vector<uint32_t> inputsBytes(inputInfos.num, 0);
+
+    for (uint32_t i = 0; i < inputInfos.num; ++i) {
+        inputsBytes[i] = inputInfos.pBufferInfo[i].getBufferSize();
+        inputs[i] = inputInfos.pBufferInfo[i].pBuffer;
     }
 
-    uint8_t** poutputs = outputInfo.pBuffer;
-    std::vector<uint32_t> outputsBytes(outputInfo.num, 0);
-    for (uint32_t i = 0; i < inputInfo.num; ++i) {
-        outputsBytes[i] = outputInfo.pWidth[i] * outputInfo.pHeight[i] * sizeof(float);
-    }
-
-    process(pInputs, inputsBytes.data(), inputInfo.num,
-            poutputs, outputsBytes.data(), outputInfo.num);
-    
+    process(inputs.data(), inputsBytes.data(), inputInfos.num, outputInfo);
+    ALOGI(TAG, "AlgoImgCls process finish");
     return EXIT_SUCCESS;
 }
 
-int AlgoImgCls::process(float* pInput, uint32_t inputSize, float* pOutput, uint32_t outputSize) {
-    std::string outputDir = "/data/data/com.android.camera2/save/vaas";
-    
-    std::string savePath = outputDir + "/Result/";
-    mpSNPETask->process(pInput, inputSize, pOutput, outputSize);
-    // mpSNPETask->saveOutputMap(outputTensor, savePath);
-    return EXIT_SUCCESS;
-}
-
-int AlgoImgCls::process(uint8_t** pInputs, uint32_t* pInputsBytes, uint32_t inputNum,
-                        uint8_t** pOutputs, uint32_t* pOutputsBytes, uint32_t outputNum) {
-    mpSNPETask->process(pInputs, pInputsBytes, inputNum, pOutputs, pOutputsBytes, outputNum);
-
-    for (int i = 0; i < outputNum; ++i) {
-        executeClass(reinterpret_cast<float*>(pOutputs[i]), pOutputsBytes[i] / sizeof(float));
-    }
-
-    return EXIT_SUCCESS;
+int AlgoImgCls::process(uint8_t** pInputs, uint32_t* pInputsBytes, uint32_t inputNum, ImageClassificationInfo& outputInfo) {
+    uint8_t* pOutput = mOutput.data();
+    uint32_t outputSize = mOutput.size();
+    mpSNPETask->process(pInputs, pInputsBytes, inputNum, &pOutput, &outputSize, 1);
+    return executeClass(reinterpret_cast<float*>(pOutput), outputSize / sizeof(float), outputInfo);
 }
 
 int AlgoImgCls::deinit() {
@@ -75,22 +65,17 @@ AlgoImgCls* AlgoImgCls::getInstance() {
 }
 
 template <typename T>
-int AlgoImgCls::executeClass(T* pOutput, uint32_t outputSize) {
-    float conf = 0;
-    float maxVal = -FLT_MAX;
-    int label = -1;
-
-    for (int i = 0; i < outputSize; ++i) {
-        if (pOutput[i] > maxVal) {
-            maxVal = pOutput[i];
-            label = i;
+int AlgoImgCls::executeClass(T* pOutput, uint32_t outputSize, ImageClassificationInfo& outputInfo) {
+    for (uint32_t i = 0; i < outputSize; ++i) {
+        if (pOutput[i] > pOutput[outputInfo.label]) {
+            outputInfo.label = i;
         }
 
-        conf += exp(pOutput[i]);
+        outputInfo.confidence += exp(pOutput[i]);
     }
 
-    conf = exp(maxVal) / conf;
-    ALOGI(TAG, "classification label: %d, confidence: %f", label, conf);
+    outputInfo.confidence = exp(pOutput[outputInfo.label]) / outputInfo.confidence;
+    ALOGI(TAG, "classification label: %u, confidence: %f", outputInfo.label, outputInfo.confidence);
     return EXIT_SUCCESS;
 }
 

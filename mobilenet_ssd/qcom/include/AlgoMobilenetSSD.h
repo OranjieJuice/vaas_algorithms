@@ -5,11 +5,6 @@
 #include "AlgoMobilenetSSDInterface.h"
 #include <memory>
 
-#ifdef TAG
-#undef TAG
-#endif
-#define TAG "VAAS_SNPE"
-
 namespace vaas_algorithms {
 
 class AlgoMobilenetSSD {
@@ -17,7 +12,7 @@ public:
     AlgoMobilenetSSD();
     ~AlgoMobilenetSSD();
     int init();
-    int process(BufferInfo& inputInfo, MobilenetSSDConfig& config);
+    int process(BufferInfos& inputInfos, MobilenetSSDConfig& config);
     int deinit();
     static AlgoMobilenetSSD* getInstance();
 private:
@@ -25,11 +20,13 @@ private:
     int process(uint8_t** pInputs, uint32_t* pInputsBytes, uint32_t inputNum, MobilenetSSDConfig& config);
     static AlgoMobilenetSSD msInstance;
     std::unique_ptr<SNPETask> mpSNPETask;
-    int mBoxNum;
-    int mClassNum;
-    int mPosNum;
-    int mSingleElementSize;
-    std::vector<uint8_t> mModelOutput;
+    uint32_t mBoxNum;
+    uint32_t mClassNum;
+    uint32_t mPosNum;
+    uint32_t mSingleElementSize;
+    std::vector<uint8_t> mOutput;
+    std::vector<BufferInfo> mOutputInfo;
+    BufferInfos mOutputInfos;
 };
 
 }

@@ -5,50 +5,6 @@
 
 namespace vaas_algorithms {
 
-zdl::DlSystem::Runtime_t str2Runtime(const char* str) {
-    zdl::DlSystem::Runtime_t runtime;
-
-    if (strcmp(str, "cpu") == 0) {
-        runtime = zdl::DlSystem::Runtime_t::CPU;
-    } else if (strcmp(str, "gpu") == 0) {
-        runtime = zdl::DlSystem::Runtime_t::GPU;
-    } else if (strcmp(str, "dsp") == 0) {
-        runtime = zdl::DlSystem::Runtime_t::DSP;
-    } else if (strcmp(str, "aip") == 0) {
-        runtime = zdl::DlSystem::Runtime_t::AIP_FIXED8_TF;
-    } else {
-        runtime = zdl::DlSystem::Runtime_t::CPU;
-        ALOGE(TAG, "Runtime %s is not available, return cpu", str);
-    }
-
-    return runtime;
-}
-
-std::string runtime2Str(zdl::DlSystem::Runtime_t runtime) {
-    std::string str;
-
-    switch (runtime) {
-        case zdl::DlSystem::Runtime_t::CPU:
-            str = "cpu";
-            break;
-        case zdl::DlSystem::Runtime_t::GPU:
-            str = "gpu";
-            break;
-        case zdl::DlSystem::Runtime_t::DSP:
-            str = "dsp";
-            break;
-        case zdl::DlSystem::Runtime_t::AIP_FIXED8_TF:
-            str = "aip";
-            break;
-        default:
-            str = "cpu";
-            ALOGE(TAG, "Runtime %d is not available, return cpu.", (int) runtime);
-            break;
-    }
-
-    return str;
-}
-
 bool ensureDirectory(const std::string& dir) {
     auto i = dir.find_last_of('/');
     std::string prefix = dir.substr(0, i);
@@ -78,13 +34,13 @@ void nms(std::set<BoxInfo>& sortedBoxInfos, std::vector<BoxInfo>& pickedBoxInfos
     int start = pickedBoxInfos.size();
 
     for (const BoxInfo& boxInfo:sortedBoxInfos) {
-        if (pickedBoxInfos.size() - start >= topK) {
+        if (static_cast<int>(pickedBoxInfos.size()) - start >= topK) {
             break;
         }
 
         bool bPick = true;
 
-        for (int i = start; i < pickedBoxInfos.size() && bPick; ++i) {
+        for (uint32_t i = start; i < pickedBoxInfos.size() && bPick; ++i) {
             bPick &= calculateIOU(boxInfo, pickedBoxInfos[i]) < iouThreshold;
         }
 

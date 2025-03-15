@@ -17,7 +17,12 @@ struct MobilenetSSDConfig {
             topK(-1),
             pObject(nullptr),
             processObjectCallback(nullptr) {}
-    MobilenetSSDConfig(float scoreThreshold, float iouThreshold, int topK, void* pObject, processObjectCallback_t processObjectCallback) :
+    MobilenetSSDConfig(
+            float scoreThreshold,
+            float iouThreshold,
+            int topK,
+            void* pObject,
+            processObjectCallback_t processObjectCallback) :
             scoreThreshold(scoreThreshold),
             iouThreshold(iouThreshold),
             topK(topK),
@@ -26,7 +31,7 @@ struct MobilenetSSDConfig {
 };
 
 extern "C" int algoMobilenetSSDInit();
-extern "C" int algoMobilenetSSDProcess(BufferInfo& inputInfo, MobilenetSSDConfig& config);
+extern "C" int algoMobilenetSSDProcess(BufferInfos& inputInfos, MobilenetSSDConfig& config);
 extern "C" int algoMobilenetSSDDeinit();
 
 }

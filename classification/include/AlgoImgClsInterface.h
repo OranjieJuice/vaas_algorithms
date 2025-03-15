@@ -6,7 +6,7 @@
 namespace vaas_algorithms {
 
 extern "C" int algoImgClsInit();
-extern "C" int algoImgClsProcess(BufferInfo inputInfo, BufferInfo outputInfo, bool bReuseBuffer);
+extern "C" int algoImgClsProcess(BufferInfos& inputInfos, ImageClassificationInfo& outputInfo);
 extern "C" int algoImgClsDeinit();
 
 }

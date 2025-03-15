@@ -9,8 +9,8 @@ int algoMobilenetSSDInit() {
 }
 
 extern "C"
-int algoMobilenetSSDProcess(BufferInfo& inputInfo, MobilenetSSDConfig& config) {
-    return AlgoMobilenetSSD::getInstance()->process(inputInfo, config);
+int algoMobilenetSSDProcess(BufferInfos& inputInfos, MobilenetSSDConfig& config) {
+    return AlgoMobilenetSSD::getInstance()->process(inputInfos, config);
 }
 
 extern "C"

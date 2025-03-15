@@ -11,16 +11,19 @@ public:
     AlgoImgCls();
     ~AlgoImgCls();
     int init();
-    int process(BufferInfo inputInfo, BufferInfo outputInfo, bool bReuse);
+    int process(BufferInfos& inputInfos, ImageClassificationInfo& outputInfo);
     int deinit();
     static AlgoImgCls* getInstance();
 private:
-    template<typename T> int executeClass(T* pOutput, uint32_t outputSize);
-    int process(float* pInput, uint32_t inputSize, float* pOutput, uint32_t outputSize);
-    int process(uint8_t** pInputs, uint32_t* pInputsBytes, uint32_t inputNum,
-                uint8_t** pOutputs, uint32_t* pOutputsBytes, uint32_t outputNum);
+    template<typename T> int executeClass(T* pOutput, uint32_t outputSize, ImageClassificationInfo& outputInfo);
+    int process(uint8_t** pInputs, uint32_t* pInputsBytes, uint32_t inputNum, ImageClassificationInfo& outputInfo);
     static AlgoImgCls msInstance;
     std::unique_ptr<SNPETask> mpSNPETask;
+    uint32_t mClassNum;
+    uint32_t mElementSize;
+    std::vector<uint8_t> mOutput;
+    std::vector<BufferInfo> mOutputInfo;
+    BufferInfos mOutputInfos;
 };
 
 }

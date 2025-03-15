@@ -9,8 +9,8 @@ int algoImgClsInit() {
 }
 
 extern "C"
-int algoImgClsProcess(BufferInfo inputInfo, BufferInfo outputInfo, bool bReuseBuffer) {
-    return AlgoImgCls::getInstance()->process(inputInfo, outputInfo, bReuseBuffer);
+int algoImgClsProcess(BufferInfos& inputInfos, ImageClassificationInfo& outputInfo) {
+    return AlgoImgCls::getInstance()->process(inputInfos, outputInfo);
 }
 
 extern "C"

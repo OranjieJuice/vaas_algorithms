@@ -1,4 +1,3 @@
-#include <fstream>
 #include <math.h>
 #include "SNPE/SNPEFactory.hpp"
 #include "SNPE/SNPEBuilder.hpp"
@@ -13,15 +12,16 @@ namespace vaas_algorithms {
 
 SNPETask::SNPETask() {}
 
-SNPETask::SNPETask(std::string& dlc,
-                   zdl::DlSystem::Runtime_t runtime,
-                   zdl::DlSystem::ProfilingLevel_t profilingLevel,
-                   std::string& outputDir,
-                   bool bTfNBuffer,
-                   bool bStaticQuantization,
-                   uint32_t bitWidth,
-                   uint32_t resizableDim,
-                   bool bUseUserSuppliedBuffers) {
+SNPETask::SNPETask(
+        std::string& dlc,
+        zdl::DlSystem::Runtime_t runtime,
+        zdl::DlSystem::ProfilingLevel_t profilingLevel,
+        std::string& outputDir,
+        bool bTfNBuffer,
+        bool bStaticQuantization,
+        uint32_t bitWidth,
+        uint32_t resizableDim,
+        bool bUseUserSuppliedBuffers) {
     ALOGI(TAG, "SNPETask constructor start");
     mbTfNBuffer = bTfNBuffer;
     mbStaticQuantization = bStaticQuantization;
@@ -39,10 +39,11 @@ SNPETask::~SNPETask() {
     ALOGI(TAG, "SNPETask destructor finish");
 }
 
-int SNPETask::init(std::string& dlc,
-                   zdl::DlSystem::Runtime_t runtime,
-                   zdl::DlSystem::ProfilingLevel_t profilingLevel,
-                   bool bUseUserSuppliedBuffers) {
+int SNPETask::init(
+        std::string& dlc,
+        zdl::DlSystem::Runtime_t runtime,
+        zdl::DlSystem::ProfilingLevel_t profilingLevel,
+        bool bUseUserSuppliedBuffers) {
     ALOGI(TAG, "SNPE init start");
     std::unique_ptr <zdl::DlContainer::IDlContainer> container = loadContainer(dlc);
     checkRuntime(runtime);
@@ -81,25 +82,28 @@ int SNPETask::deinit() {
     return EXIT_SUCCESS;
 }
 
-int SNPETask::process(const unsigned char* data,
-                      uint32_t dataSize,
-                      zdl::DlSystem::TensorMap& outputTensor) {
+int SNPETask::process(
+        const unsigned char* data,
+        uint32_t dataSize,
+        zdl::DlSystem::TensorMap& outputTensor) {
     std::unique_ptr<zdl::DlSystem::ITensor> inputTensor = createInputTensor(mTensorShape, data, dataSize);
     process(inputTensor, outputTensor);
     return EXIT_SUCCESS;
 }
 
-int SNPETask::process(std::vector<float>& input,
-                      zdl::DlSystem::TensorMap& outputTensor) {
+int SNPETask::process(
+        std::vector<float>& input,
+        zdl::DlSystem::TensorMap& outputTensor) {
     std::unique_ptr<zdl::DlSystem::ITensor> inputTensor = createInputTensor(input);
     process(inputTensor, outputTensor);
     return EXIT_SUCCESS;
 }
 
-int SNPETask::process(float* pInput,
-                      uint32_t inputSize,
-                      float* pOutput,
-                      uint32_t outputSize) {
+int SNPETask::process(
+        float* pInput,
+        uint32_t inputSize,
+        float* pOutput,
+        uint32_t outputSize) {
     std::unique_ptr<zdl::DlSystem::ITensor> inputTensor = createInputTensor(pInput, inputSize);
     zdl::DlSystem::TensorMap outputTensor;
     process(inputTensor, outputTensor);
@@ -107,16 +111,18 @@ int SNPETask::process(float* pInput,
     return EXIT_SUCCESS;
 }
 
-int SNPETask::process(std::unique_ptr<zdl::DlSystem::ITensor>& inputTensor,
-                      zdl::DlSystem::TensorMap& outputTensor) {
+int SNPETask::process(
+        std::unique_ptr<zdl::DlSystem::ITensor>& inputTensor,
+        zdl::DlSystem::TensorMap& outputTensor) {
     ALOGI(TAG, "SNPE process start");
     mpSNPE->execute(inputTensor.get(), outputTensor);
     ALOGI(TAG, "SNPE process finish");
     return EXIT_SUCCESS;
 }
 
-int SNPETask::process(uint8_t** pInput, uint32_t* pInputSize, uint32_t inputNum,
-                      uint8_t** pOutput, uint32_t* pOutputSize, uint32_t outputNum) {
+int SNPETask::process(
+        uint8_t** pInput, uint32_t* pInputSize, uint32_t inputNum,
+        uint8_t** pOutput, uint32_t* pOutputSize, uint32_t outputNum) {
     ALOGI(TAG, "SNPE process start");
     if ((pInput == nullptr) || (pOutput == nullptr)) {
         ALOGE(TAG, "pInput(%p) or pOutput(%p) is nullptr", pInput, pOutput);
@@ -203,9 +209,10 @@ std::unique_ptr<zdl::DlContainer::IDlContainer> SNPETask::loadContainer(std::str
     return container;
 }
 
-std::unique_ptr<zdl::DlSystem::ITensor> SNPETask::createInputTensor(const zdl::DlSystem::TensorShape& shape,
-                                                                    const unsigned char* data,
-                                                                    uint32_t dataSize) {
+std::unique_ptr<zdl::DlSystem::ITensor> SNPETask::createInputTensor(
+        const zdl::DlSystem::TensorShape& shape,
+        const unsigned char* data,
+        uint32_t dataSize) {
     ALOGI(TAG, "createInputTensor start");
     std::unique_ptr<zdl::DlSystem::ITensor> inputTensor = zdl::SNPE::SNPEFactory::getTensorFactory().createTensor(shape, data, dataSize);
     ALOGI(TAG, "createInputTensor finish");
@@ -233,16 +240,12 @@ std::unique_ptr<zdl::DlSystem::ITensor> SNPETask::createInputTensor(float* pInpu
     return inputTensor;
 }
 
-int SNPETask::copyOutputTensor(float* pOutputTensor, uint32_t outputSize, zdl::DlSystem::TensorMap& outputTensor) {
-    // std::copy(outputTensor)
-    return EXIT_SUCCESS;
-}
-
-int SNPETask::createUserBuffer(zdl::DlSystem::UserBufferMap& userBufferMap,
-                               std::unordered_map<std::string, std::unique_ptr<zdl::DlSystem::IUserBuffer>>& backedUserBuffers,
-                               uint8_t* pBuffers,
-                               uint32_t bufferSize,
-                               const char* name) {
+int SNPETask::createUserBuffer(
+        zdl::DlSystem::UserBufferMap& userBufferMap,
+        std::unordered_map<std::string, std::unique_ptr<zdl::DlSystem::IUserBuffer>>& backedUserBuffers,
+        uint8_t* pBuffers,
+        uint32_t bufferSize,
+        const char* name) {
     ALOGI(TAG, "createUserBuffer start");
     zdl::DlSystem::Optional<zdl::DlSystem::IBufferAttributes*> bufferAttributesOpt = mpSNPE->getInputOutputBufferAttributes(name);
 
@@ -258,7 +261,7 @@ int SNPETask::createUserBuffer(zdl::DlSystem::UserBufferMap& userBufferMap,
 
     for (uint32_t i = dimNum - 1; i > 0; --i) {
         strides[i - 1] = strides[i] * ((bufferShape[i] == 0) ? mResizableDim : bufferShape[i]);
-        ALOGI(TAG, "i: %u, bufferShape: %lu", i, bufferShape[i]);
+        ALOGI(TAG, "i: %u, bufferShape: %zu", i, bufferShape[i]);
     }
 
     uint32_t requiredBufferSize = strides[0] * ((bufferShape[0] == 0) ? mResizableDim : bufferShape[0]);
@@ -314,25 +317,14 @@ int SNPETask::saveOutputMap(zdl::DlSystem::TensorMap& outputTensor, const std::s
                 return EXIT_FAILURE;
             }
 
-            std::ofstream os(file);
-            int k = 0, label = 0;
-            float conf = 0, maxVal = *output->cbegin();
+            FILE* pFile = fopen(file.c_str(), "wb");
 
             for (auto iter = output->cbegin() + i * batchChunk; iter != output->cbegin() + (i + 1) * batchChunk; iter++) {
                 float f = *iter;
-                os.write(reinterpret_cast<char*>(&f), sizeof(float));
-
-                if (f > maxVal) {
-                    maxVal = f;
-                    label = k;
-                }
-
-                conf += exp(f);
-                k++;
+                fwrite(reinterpret_cast<char*>(&f), sizeof(char), sizeof(float) / sizeof(char), pFile);
             }
 
-            conf = exp(maxVal) / conf;
-            ALOGI(TAG, "classification label: %d, confidence: %f", label, conf);
+            fclose(pFile);
         }
     }
 
@@ -346,6 +338,50 @@ zdl::DlSystem::TensorShape SNPETask::getTensorShape() {
 
 int SNPETask::getBatchSize() {
     return mTensorShape[0];
+}
+
+zdl::DlSystem::Runtime_t SNPETask::str2Runtime(const char* str) {
+    zdl::DlSystem::Runtime_t runtime;
+
+    if (strcmp(str, "cpu") == 0) {
+        runtime = zdl::DlSystem::Runtime_t::CPU;
+    } else if (strcmp(str, "gpu") == 0) {
+        runtime = zdl::DlSystem::Runtime_t::GPU;
+    } else if (strcmp(str, "dsp") == 0) {
+        runtime = zdl::DlSystem::Runtime_t::DSP;
+    } else if (strcmp(str, "aip") == 0) {
+        runtime = zdl::DlSystem::Runtime_t::AIP_FIXED8_TF;
+    } else {
+        runtime = zdl::DlSystem::Runtime_t::CPU;
+        ALOGE(TAG, "Runtime %s is not available, return cpu.", str);
+    }
+
+    return runtime;
+}
+
+std::string SNPETask::runtime2Str(zdl::DlSystem::Runtime_t runtime) {
+    std::string str;
+
+    switch (runtime) {
+        case zdl::DlSystem::Runtime_t::CPU:
+            str = "cpu";
+            break;
+        case zdl::DlSystem::Runtime_t::GPU:
+            str = "gpu";
+            break;
+        case zdl::DlSystem::Runtime_t::DSP:
+            str = "dsp";
+            break;
+        case zdl::DlSystem::Runtime_t::AIP_FIXED8_TF:
+            str = "aip";
+            break;
+        default:
+            str = "cpu";
+            ALOGE(TAG, "Runtime %d is not available, return cpu.", (int) runtime);
+            break;
+    }
+
+    return str;
 }
 
 }

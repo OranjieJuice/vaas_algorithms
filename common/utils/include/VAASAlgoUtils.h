@@ -5,7 +5,7 @@
 #include <vector>
 #include <unordered_map>
 #include <set>
-#include "DlSystem/DlEnums.hpp"
+#include "VAASAlgoLog.h"
 
 #ifdef TAG
 #undef TAG
@@ -32,63 +32,139 @@ enum BufferType {
     BUFFER_TYPE_FLOAT32 = 7,
 };
 
+static const std::unordered_map<BufferType, uint32_t> BUFFER_ELEMENT_SIZE = {
+    {BufferType::BUFFER_TYPE_UINT8, sizeof(uint8_t)},
+    {BufferType::BUFFER_TYPE_INT8, sizeof(int8_t)},
+    {BufferType::BUFFER_TYPE_UINT16, sizeof(uint16_t)},
+    {BufferType::BUFFER_TYPE_INT16, sizeof(int16_t)},
+    {BufferType::BUFFER_TYPE_UINT32, sizeof(uint32_t)},
+    {BufferType::BUFFER_TYPE_INT32, sizeof(int32_t)},
+    {BufferType::BUFFER_TYPE_FLOAT32, sizeof(float)}
+};
+
 struct BufferInfo {
-    uint8_t** pBuffer;
-    uint32_t* pWidth;
-    uint32_t* pHeight;
-    uint32_t* pRow;
-    uint32_t* pCol;
-    uint32_t num;
+    uint8_t* pBuffer;
+    uint32_t width;
+    uint32_t height;
+    uint32_t row;
+    uint32_t col;
+    uint32_t rotate90;
     ImageType imageType;
     BufferType bufferType;
+
     BufferInfo() :
             pBuffer(nullptr),
-            pWidth(nullptr),
-            pHeight(nullptr),
-            pRow(nullptr),
-            pCol(nullptr),
-            num(0),
-            imageType(ImageType::IMAGE_TYPE_RGB),
-            bufferType(BufferType::BUFFER_TYPE_UINT8) {}
-    BufferInfo(uint8_t** pBuffer,
-               uint32_t* pWidth,
-               uint32_t* pHeight,
-               uint32_t* pRow,
-               uint32_t* pCol,
-               uint32_t num,
-               ImageType imageType,
-               BufferType bufferType) :
-               pBuffer(pBuffer),
-               pWidth(pWidth),
-               pHeight(pHeight),
-               pRow(pRow),
-               pCol(pCol),
-               num(num),
-               imageType(imageType),
-               bufferType(bufferType) {}
+            width(0),
+            height(0),
+            row(0),
+            col(0),
+            rotate90(0),
+            imageType(ImageType::IMAGE_TYPE_DEFAULT),
+            bufferType(BufferType::BUFFER_TYPE_DEFAULT) {}
+
+    BufferInfo(
+            uint8_t* pBuffer,
+            uint32_t width,
+            uint32_t height,
+            uint32_t row,
+            uint32_t col,
+            uint32_t rotate90,
+            ImageType imageType,
+            BufferType bufferType) :
+            pBuffer(pBuffer),
+            width(width),
+            height(height),
+            row(row),
+            col(col),
+            rotate90(rotate90),
+            imageType(imageType),
+            bufferType(bufferType) {}
+
+    uint32_t getRGBSize() {
+        return 3 * getRGBChannelSize();
+    }
+
+    uint32_t getRGBChannelSize() {
+        return height * width;
+    }
+
+    uint32_t getYUVSize() {
+        return getYChannelSize() * 3 / 2;
+    }
+
+    uint32_t getYChannelSize() {
+        return col * row;
+    }
+
+    uint32_t getBufferSize() {
+        if (bufferType == BufferType::BUFFER_TYPE_DEFAULT) {
+            ALOGE(TAG, "getBufferSize failed, bufferType: %d", bufferType);
+            return 0;
+        }
+
+        auto it = BUFFER_ELEMENT_SIZE.find(bufferType);
+        uint32_t size = it == BUFFER_ELEMENT_SIZE.end() ? 0 : it->second;
+
+        switch (imageType) {
+            case ImageType::IMAGE_TYPE_NV21:
+                size *= getYUVSize();
+                break;
+            case ImageType::IMAGE_TYPE_BIN:
+                size *= getRGBChannelSize();
+                break;
+            case ImageType::IMAGE_TYPE_RGB:
+                size *= getRGBSize();
+                break;
+            default:
+                ALOGE(TAG, "unsupport image type, imageType: %d", imageType);
+                return 0;
+                break;
+        }
+
+        return size;
+    }
+
+    static uint32_t calCol(uint32_t width) {
+        return width;
+    }
+
+    static uint32_t calRow(uint32_t height) {
+        return (height + 16 + 63) & ~63;
+    }
+};
+
+struct BufferInfos {
+    uint32_t num;
+    BufferInfo* pBufferInfo;
+    BufferInfos() : num(0), pBufferInfo(nullptr) {}
+    BufferInfos(uint32_t num, BufferInfo* pBufferInfo) : num(num), pBufferInfo(pBufferInfo) {}
+};
+
+struct ImageClassificationInfo {
+    uint32_t label;
+    float confidence;
+    ImageClassificationInfo() : label(0), confidence(0.0f) {}
+    ImageClassificationInfo(uint32_t label, float confidence) : label(label), confidence(confidence) {}
 };
 
 struct BoxInfo {
-    int label;
+    uint32_t label;
     float confidence;
     std::vector<float> position;
-    BoxInfo() : label(0), confidence(0) {}
-    BoxInfo(int label, float confidence) : label(label), confidence(confidence) {}
-    BoxInfo(int label, float confidence, std::vector<float>& position) : label(label), confidence(confidence), position(std::move(position)) {}
+    BoxInfo() : label(0), confidence(0.0f) {}
+    BoxInfo(uint32_t label, float confidence) : label(label), confidence(confidence) {}
+    BoxInfo(uint32_t label, float confidence, std::vector<float>& position) : label(label), confidence(confidence), position(std::move(position)) {}
 
     bool operator<(const BoxInfo& boxInfoB) const {
         return confidence > boxInfoB.confidence;
     }
 
-    float operator[](int index) const {
+    float operator[](uint32_t index) const {
         return position[index];
     }
 };
 
 typedef void (*processObjectCallback_t)(void* pObject, void* pData);
-
-zdl::DlSystem::Runtime_t str2Runtime(const char* str);
-std::string runtime2Str(zdl::DlSystem::Runtime_t runtime);
 bool ensureDirectory(const std::string& dir);
 void nms(std::set<BoxInfo>& sortedBoxInfos, std::vector<BoxInfo>& pickedBoxInfos, float iouThreshold, int topK);
 float calculateIOU(const BoxInfo &boxInfoA, const BoxInfo &boxInfoB, float delta = 1e-5);
